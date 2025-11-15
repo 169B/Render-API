@@ -1,25 +1,57 @@
 import express from "express";
 import fetch from "node-fetch";
+import cors from "cors";
 
 const app = express();
-const API_KEY = process.env.ROBOT_EVENTS_API_KEY;
+app.use(cors());
 
-app.get("/events/:team", async (req, res) => {
-  const url = `https://www.robotevents.com/api/v2/teams/${req.params.team}/events`;
+const API_KEY = process.env.RE_API_KEY;
 
-  const response = await fetch(url, {
-    headers: {
-      "Authorization": `Bearer ${API_KEY}`,
-      "Accept": "application/json"
-    }
-  });
+// Get upcoming events for a team
+app.get("/api/teams/:team/events", async (req, res) => {
+  const team = req.params.team;
 
-  const data = await response.json();
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.json(data);
+  try {
+    const url = `https://www.robotevents.com/api/v2/teams/${team}/events?myEvents=false&past=false&per_page=50`;
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await response.json();
+    res.json(data);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get("/", (req, res) => res.send("RobotEvents Proxy Running"));
+// Get matches for a specific event
+app.get("/api/events/:eventId/matches", async (req, res) => {
+  const eventId = req.params.eventId;
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Proxy running"));
+  try {
+    const url = `https://www.robotevents.com/api/v2/events/${eventId}/matches`;
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await response.json();
+    res.json(data);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Root test route
+app.get("/", (req, res) => res.send("RobotEvents Proxy Operational ✔"));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
