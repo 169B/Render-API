@@ -53,7 +53,7 @@ app.get('/api/teams/:teamNumber', async (req, res) => {
 app.get('/api/teams/:teamNumber/events', async (req, res) => {
   try {
     const { teamNumber } = req.params;
-    const { season, level } = req.query;
+    const { season, level, start } = req.query;
     
     // First, get the team ID
     const teamResponse = await axios.get(
@@ -70,13 +70,13 @@ app.get('/api/teams/:teamNumber/events', async (req, res) => {
     
     const teamId = teamResponse.data.data[0].id;
     
-    // Get events for the team
-    const params = { team_id: teamId };
+    // Get events for the team using the team-specific endpoint
+    const params = { start: start || '2024-06-01' };
     if (season) params.season = season;
     if (level) params.level = level;
     
     const eventsResponse = await axios.get(
-      `${ROBOTEVENTS_API_BASE}/events`,
+      `${ROBOTEVENTS_API_BASE}/teams/${teamId}/events`,
       {
         headers: robotEventsHeaders,
         params
@@ -175,6 +175,30 @@ app.get('/api/events/:eventId', async (req, res) => {
   }
 });
 
+// Get event by SKU
+app.get('/api/events/sku/:eventSku', async (req, res) => {
+  try {
+    const { eventSku } = req.params;
+    const response = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/events`,
+      {
+        headers: robotEventsHeaders,
+        params: {
+          'sku[]': eventSku,
+          myEvents: false
+        }
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching event by SKU:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to fetch event by SKU',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
 // Get team rankings at an event
 app.get('/api/events/:eventId/teams/:teamNumber/rankings', async (req, res) => {
   try {
@@ -246,12 +270,12 @@ app.get('/api/teams/multiple', async (req, res) => {
         
         const teamId = teamResponse.data.data[0].id;
         
-        // Get events for the team
+        // Get events for the team using the team-specific endpoint
         const eventsResponse = await axios.get(
-          `${ROBOTEVENTS_API_BASE}/events`,
+          `${ROBOTEVENTS_API_BASE}/teams/${teamId}/events`,
           {
             headers: robotEventsHeaders,
-            params: { team_id: teamId }
+            params: { start: '2024-06-01' }
           }
         );
         
