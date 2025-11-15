@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEX Advanced Competition Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --team-169a-color: #2196F3;
+            --team-169b-color: #9C27B0;
+            --team-169x-color: #F44336;
+            --team-169y-color: #4CAF50;
+            --team-169z-color: #FF9800;
+            --bg-dark: #0a0e27;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-primary: #ffffff;
+            --text-secondary: #b8c0e0;
+            --accent-glow: rgba(156, 39, 176, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header & Team Selector */
+        .header {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .team-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .team-btn {
+            padding: 12px 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .team-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .team-btn.active {
+            transform: translateY(-2px);
+        }
+
+        .team-btn.active.team-169a {
+            background: var(--team-169a-color);
+            border-color: var(--team-169a-color);
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.5);
+        }
+
+        .team-btn.active.team-169b {
+            background: var(--team-169b-color);
+            border-color: var(--team-169b-color);
+            box-shadow: 0 5px 20px rgba(156, 39, 176, 0.5);
+        }
+
+        .team-btn.active.team-169x {
+            background: var(--team-169x-color);
+            border-color: var(--team-169x-color);
+            box-shadow: 0 5px 20px rgba(244, 67, 54, 0.5);
+        }
+
+        .team-btn.active.team-169y {
+            background: var(--team-169y-color);
+            border-color: var(--team-169y-color);
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .team-btn.active.team-169z {
+            background: var(--team-169z-color);
+            border-color: var(--team-169z-color);
+            box-shadow: 0 5px 20px rgba(255, 152, 0, 0.5);
+        }
+
+        .event-selector {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .event-select {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 1em;
+            min-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+
+        .refresh-info {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            border-radius: 2px;
+        }
+
+        /* Live Badge */
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f44336;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            animation: pulse 2s infinite;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(244, 67, 54, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(244, 67, 54, 0.8); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Stats Display */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Rankings Table */
+        .rankings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .rankings-table th {
+            background: rgba(156, 39, 176, 0.2);
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .rankings-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .rankings-table tr.highlighted {
+            background: rgba(156, 39, 176, 0.15);
+            box-shadow: 0 0 20px rgba(156, 39, 176, 0.3);
+            font-weight: bold;
+        }
+
+        .rankings-table tr.top-3 {
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--team-169b-color), #E91E63);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        /* Prediction Cards */
+        .prediction-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--team-169b-color);
+        }
+
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .prediction-detail {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* Win Rate Circle */
+        .win-rate-circle {
+            width: 150px;
+            height: 150px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .win-rate-circle canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .win-rate-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        /* Match Timeline */
+        .match-timeline {
+            margin-top: 20px;
+        }
+
+        .match-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+        }
+
+        .match-item.win {
+            border-left-color: #4CAF50;
+        }
+
+        .match-item.loss {
+            border-left-color: #F44336;
+        }
+
+        .match-item.tie {
+            border-left-color: #FFC107;
+        }
+
+        .match-name {
+            font-weight: bold;
+            margin-right: 15px;
+            min-width: 50px;
+        }
+
+        .match-score {
+            margin-left: auto;
+            font-size: 1.1em;
+        }
+
+        /* Countdown Timer */
+        .countdown {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 20px 0;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ff5252;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff5252;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Probability Meter */
+        .probability-meter {
+            margin: 20px 0;
+        }
+
+        .meter-value {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .meter-label {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* Wide Card for Rankings */
+        .card-wide {
+            grid-column: 1 / -1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .team-selector {
+                gap: 5px;
+            }
+
+            .team-btn {
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+
+            .countdown {
+                font-size: 1.8em;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Slider */
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--team-169b-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--team-169b-color);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Team Selector -->
+        <div class="header">
+            <h1>🤖 VEX Advanced Competition Dashboard</h1>
+            <div class="team-selector">
+                <button class="team-btn team-169a" onclick="selectTeam('169A')">169A</button>
+                <button class="team-btn team-169b active" onclick="selectTeam('169B')">169B</button>
+                <button class="team-btn team-169x" onclick="selectTeam('169X')">169X</button>
+                <button class="team-btn team-169y" onclick="selectTeam('169Y')">169Y</button>
+                <button class="team-btn team-169z" onclick="selectTeam('169Z')">169Z</button>
+                <button class="team-btn" onclick="selectAllTeams()">View All Teams</button>
+            </div>
+            <div class="event-selector">
+                <select class="event-select" id="eventSelect" onchange="onEventChange()">
+                    <option value="">Select an event...</option>
+                </select>
+            </div>
+            <div class="refresh-info" id="refreshInfo">
+                Last updated: <span id="lastUpdate">-</span>
+            </div>
+        </div>
+
+        <!-- Live Competition Panel -->
+        <div class="dashboard-grid" id="livePanel">
+            <div class="card">
+                <h2>🔴 Live Status</h2>
+                <div id="liveStatus">
+                    <div class="no-data">Select an event to view live status</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⏱️ Next Match</h2>
+                <div id="nextMatch">
+                    <div class="no-data">No upcoming matches</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Quick Stats</h2>
+                <div id="quickStats">
+                    <div class="stat-row">
+                        <span class="stat-label">Current Rank</span>
+                        <span class="stat-value" id="currentRank">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-value" id="winRate">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Avg Score</span>
+                        <span class="stat-value" id="avgScore">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rankings Leaderboard -->
+        <div class="card card-wide" id="rankingsCard">
+            <h2>🏆 Smart Rankings Leaderboard</h2>
+            <div id="rankingsContent">
+                <div class="no-data">Select an event to view rankings</div>
+            </div>
+        </div>
+
+        <!-- Analytics & Predictions -->
+        <div class="dashboard-grid" id="analyticsPanel">
+            <div class="card">
+                <h2>🎯 Win Next X Matches</h2>
+                <div class="slider-container">
+                    <label>Wins to simulate: <span id="winsValue">0</span></label>
+                    <input type="range" min="0" max="5" value="0" class="slider" id="winsSlider" oninput="updatePredictions()">
+                </div>
+                <div id="winPredictions">
+                    <div class="no-data">Predictions not available yet</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Qualification Probability</h2>
+                <div class="probability-meter">
+                    <div class="meter-value" id="qualProb">-%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="qualBar" style="width: 0%"></div>
+                    </div>
+                    <div class="meter-label">Chance of qualifying for eliminations</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🤝 Alliance Selection</h2>
+                <div class="probability-meter">
+                    <div class="meter-value" id="allianceProb">-%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="allianceBar" style="width: 0%"></div>
+                    </div>
+                    <div class="meter-label">Likelihood of being top 8 captain</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Statistics -->
+        <div class="dashboard-grid" id="statsPanel">
+            <div class="card">
+                <h2>📊 Win/Loss Record</h2>
+                <div id="recordStats">
+                    <div class="win-rate-circle">
+                        <canvas id="recordChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Performance Trend</h2>
+                <canvas id="trendChart" height="200"></canvas>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Match History</h2>
+                <div class="match-timeline" id="matchHistory">
+                    <div class="no-data">No match history available</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000'
+            : 'https://robot-events-proxy.onrender.com';
+        
+        const TEAMS = ['169A', '169B', '169X', '169Y', '169Z'];
+        const TEAM_COLORS = {
+            '169A': '#2196F3',
+            '169B': '#9C27B0',
+            '169X': '#F44336',
+            '169Y': '#4CAF50',
+            '169Z': '#FF9800'
+        };
+
+        let currentTeam = '169B';
+        let currentEvent = null;
+        let refreshInterval = null;
+        let eventsList = [];
+        let predictionsData = null;
+
+        // Initialize dashboard
+        async function initDashboard() {
+            updateLastUpdate();
+            await loadEvents();
+        }
+
+        // Load events for selected team(s)
+        async function loadEvents() {
+            try {
+                const response = await fetch(`${API_BASE}/api/teams/${currentTeam}/events`);
+                const data = await response.json();
+                
+                eventsList = data.data || [];
+                
+                const eventSelect = document.getElementById('eventSelect');
+                eventSelect.innerHTML = '<option value="">Select an event...</option>';
+                
+                eventsList.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = `${event.name} - ${formatDate(event.start)}`;
+                    eventSelect.appendChild(option);
+                });
+
+                // Auto-select first event if available
+                if (eventsList.length > 0) {
+                    currentEvent = eventsList[0];
+                    eventSelect.value = currentEvent.id;
+                    await loadEventData();
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+
+        // Load all data for selected event
+        async function loadEventData() {
+            if (!currentEvent) return;
+
+            await Promise.all([
+                loadLiveStatus(),
+                loadRankings(),
+                loadTeamStats(),
+                loadPredictions()
+            ]);
+
+            // Set refresh interval based on event date
+            setRefreshInterval();
+        }
+
+        // Load live status
+        async function loadLiveStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events/${currentEvent.id}/matches/live`);
+                const data = await response.json();
+                
+                const liveStatus = document.getElementById('liveStatus');
+                const nextMatch = document.getElementById('nextMatch');
+
+                // Check if event is today
+                const eventStart = new Date(currentEvent.start);
+                const eventEnd = new Date(currentEvent.end);
+                const now = new Date();
+                const isLive = now >= eventStart && now <= eventEnd;
+
+                if (isLive) {
+                    liveStatus.innerHTML = `
+                        <div class="live-badge">LIVE</div>
+                        <p style="margin-top: 15px; color: var(--text-secondary);">
+                            Event is happening now!
+                        </p>
+                    `;
+                } else if (now < eventStart) {
+                    const daysUntil = Math.ceil((eventStart - now) / (1000 * 60 * 60 * 24));
+                    liveStatus.innerHTML = `
+                        <div class="countdown">${daysUntil}</div>
+                        <p style="text-align: center; color: var(--text-secondary);">
+                            days until event
+                        </p>
+                    `;
+                } else {
+                    liveStatus.innerHTML = '<div class="no-data">Event has ended</div>';
+                }
+
+                // Show next matches
+                if (data.next && data.next.length > 0) {
+                    const nextMatchData = data.next[0];
+                    const teamAlliance = nextMatchData.alliances.find(a => 
+                        a.teams.some(t => t.team.name === currentTeam)
+                    );
+
+                    if (teamAlliance) {
+                        const scheduledTime = new Date(nextMatchData.scheduled);
+                        const minutesUntil = Math.round((scheduledTime - now) / (1000 * 60));
+                        
+                        nextMatch.innerHTML = `
+                            <div class="stat-row">
+                                <span class="stat-label">Match</span>
+                                <span class="stat-value">${nextMatchData.name}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Time</span>
+                                <span class="stat-value">${formatTime(nextMatchData.scheduled)}</span>
+                            </div>
+                            ${minutesUntil > 0 ? `
+                                <div class="countdown">${minutesUntil} min</div>
+                            ` : ''}
+                        `;
+                    } else {
+                        nextMatch.innerHTML = '<div class="no-data">No upcoming matches for this team</div>';
+                    }
+                } else {
+                    nextMatch.innerHTML = '<div class="no-data">No upcoming matches</div>';
+                }
+            } catch (error) {
+                console.error('Error loading live status:', error);
+            }
+        }
+
+        // Load rankings
+        async function loadRankings() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events/${currentEvent.id}/rankings`);
+                const data = await response.json();
+                
+                const rankings = data.data || [];
+                const rankingsContent = document.getElementById('rankingsContent');
+
+                if (rankings.length === 0) {
+                    rankingsContent.innerHTML = '<div class="no-data">Rankings not yet published</div>';
+                    return;
+                }
+
+                // Show top 30
+                const top30 = rankings.slice(0, 30);
+                
+                let tableHTML = `
+                    <table class="rankings-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Team</th>
+                                <th>WP</th>
+                                <th>AP</th>
+                                <th>SP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                top30.forEach(ranking => {
+                    const isOurTeam = TEAMS.includes(ranking.team.name);
+                    const isTop3 = ranking.rank <= 3;
+                    const rowClass = isOurTeam ? 'highlighted' : (isTop3 ? 'top-3' : '');
+                    const medal = ranking.rank === 1 ? '🥇' : (ranking.rank === 2 ? '🥈' : (ranking.rank === 3 ? '🥉' : ''));
+
+                    tableHTML += `
+                        <tr class="${rowClass}">
+                            <td><span class="rank-badge">${medal}${ranking.rank}</span></td>
+                            <td><strong>${ranking.team.name}</strong></td>
+                            <td>${ranking.wins || 0}</td>
+                            <td>${ranking.ap || 0}</td>
+                            <td>${ranking.sp || 0}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += '</tbody></table>';
+                rankingsContent.innerHTML = tableHTML;
+
+                // Update quick stats
+                const teamRanking = rankings.find(r => r.team.name === currentTeam);
+                if (teamRanking) {
+                    document.getElementById('currentRank').textContent = teamRanking.rank;
+                }
+            } catch (error) {
+                console.error('Error loading rankings:', error);
+                document.getElementById('rankingsContent').innerHTML = 
+                    '<div class="error">Failed to load rankings</div>';
+            }
+        }
+
+        // Load team statistics
+        async function loadTeamStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/teams/${currentTeam}/stats?eventId=${currentEvent.id}`);
+                const data = await response.json();
+                
+                const stats = data.stats;
+
+                // Update quick stats
+                document.getElementById('winRate').textContent = `${stats.winRate}%`;
+                document.getElementById('avgScore').textContent = stats.avgScore;
+
+                // Update record chart
+                updateRecordChart(stats.wins, stats.losses, stats.ties);
+
+                // Update trend chart
+                updateTrendChart(stats.scores);
+
+                // Update match history
+                updateMatchHistory(stats);
+            } catch (error) {
+                console.error('Error loading team stats:', error);
+                document.getElementById('winRate').textContent = '-%';
+                document.getElementById('avgScore').textContent = '-';
+            }
+        }
+
+        // Load predictions
+        async function loadPredictions() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events/${currentEvent.id}/teams/${currentTeam}/predictions`);
+                predictionsData = await response.json();
+                
+                updatePredictions();
+
+                // Update probability meters
+                if (predictionsData.qualificationProbability !== undefined) {
+                    document.getElementById('qualProb').textContent = `${predictionsData.qualificationProbability}%`;
+                    document.getElementById('qualBar').style.width = `${predictionsData.qualificationProbability}%`;
+                }
+
+                if (predictionsData.allianceSelectionChance !== undefined) {
+                    document.getElementById('allianceProb').textContent = `${predictionsData.allianceSelectionChance}%`;
+                    document.getElementById('allianceBar').style.width = `${predictionsData.allianceSelectionChance}%`;
+                }
+            } catch (error) {
+                console.error('Error loading predictions:', error);
+            }
+        }
+
+        // Update predictions based on slider
+        function updatePredictions() {
+            if (!predictionsData || !predictionsData.predictions) return;
+
+            const winsValue = parseInt(document.getElementById('winsSlider').value);
+            document.getElementById('winsValue').textContent = winsValue;
+
+            const prediction = predictionsData.predictions.find(p => p.winsNeeded === winsValue);
+            
+            if (prediction) {
+                const winPredictions = document.getElementById('winPredictions');
+                winPredictions.innerHTML = `
+                    <div class="prediction-item">
+                        <div class="prediction-header">
+                            <span>Projected Rank</span>
+                            <span style="font-size: 1.5em; color: ${TEAM_COLORS[currentTeam]}">#${prediction.estimatedRank}</span>
+                        </div>
+                        <div class="prediction-detail">
+                            Win Points: ${prediction.projectedWP} | Autonomous: ${prediction.projectedAP}
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; color: var(--text-secondary); font-size: 0.9em;">
+                        ${winsValue === 0 ? 'Current standing with no additional wins' : 
+                          `If you win ${winsValue} of your next ${predictionsData.remainingMatches} matches`}
+                    </div>
+                `;
+            }
+        }
+
+        // Update record doughnut chart
+        function updateRecordChart(wins, losses, ties) {
+            const ctx = document.getElementById('recordChart');
+            if (!ctx) return;
+
+            if (window.recordChartInstance) {
+                window.recordChartInstance.destroy();
+            }
+
+            window.recordChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Wins', 'Losses', 'Ties'],
+                    datasets: [{
+                        data: [wins, losses, ties],
+                        backgroundColor: ['#4CAF50', '#F44336', '#FFC107'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#b8c0e0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update trend line chart
+        function updateTrendChart(scores) {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) return;
+
+            if (window.trendChartInstance) {
+                window.trendChartInstance.destroy();
+            }
+
+            window.trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: scores.map((_, i) => `M${i + 1}`),
+                    datasets: [{
+                        label: 'Score',
+                        data: scores,
+                        borderColor: TEAM_COLORS[currentTeam],
+                        backgroundColor: TEAM_COLORS[currentTeam] + '33',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#b8c0e0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#b8c0e0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update match history
+        function updateMatchHistory(stats) {
+            const matchHistory = document.getElementById('matchHistory');
+            
+            if (!stats.scores || stats.scores.length === 0) {
+                matchHistory.innerHTML = '<div class="no-data">No match history available</div>';
+                return;
+            }
+
+            // We don't have individual match results, so create a simplified view
+            let html = '';
+            stats.scores.forEach((score, index) => {
+                const matchClass = score >= stats.avgScore ? 'win' : 'loss';
+                html += `
+                    <div class="match-item ${matchClass}">
+                        <span class="match-name">Q${index + 1}</span>
+                        <span class="match-score">${score} pts</span>
+                    </div>
+                `;
+            });
+
+            matchHistory.innerHTML = html;
+        }
+
+        // Team selection
+        function selectTeam(team) {
+            currentTeam = team;
+            
+            // Update button states
+            document.querySelectorAll('.team-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Reload data
+            loadEvents();
+        }
+
+        function selectAllTeams() {
+            alert('Multi-team view coming soon! Use the multi-team-dashboard.html for organization-wide view.');
+        }
+
+        // Event selection
+        function onEventChange() {
+            const eventId = document.getElementById('eventSelect').value;
+            currentEvent = eventsList.find(e => e.id == eventId);
+            
+            if (currentEvent) {
+                loadEventData();
+            }
+        }
+
+        // Set refresh interval
+        function setRefreshInterval() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+
+            // Check if event is today
+            const eventStart = new Date(currentEvent.start);
+            const eventEnd = new Date(currentEvent.end);
+            const now = new Date();
+            const isLive = now >= eventStart && now <= eventEnd;
+
+            const interval = isLive ? 30000 : 300000; // 30s during event, 5min otherwise
+
+            refreshInterval = setInterval(() => {
+                loadEventData();
+            }, interval);
+
+            const intervalText = isLive ? '30 seconds' : '5 minutes';
+            document.getElementById('refreshInfo').innerHTML = 
+                `Last updated: <span id="lastUpdate">-</span> | Auto-refresh: ${intervalText}`;
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return 'TBD';
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        // Initialize on load
+        initDashboard();
+    </script>
+</body>
+</html>

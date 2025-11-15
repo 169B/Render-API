@@ -487,6 +487,317 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;                          // Refresh ever
 | Team Selector | N/A | Choose team for matches |
 | Use Case | Individual team | Organization-wide |
 
+## Advanced Competition Dashboard
+
+The **advanced-dashboard.html** is a feature-rich, professional-grade live competition dashboard with real-time statistics, predictive analytics, and modern glassmorphism design. Perfect for teams competing at events who want comprehensive insights and predictions.
+
+### 🌟 Key Features
+
+#### Team Selector
+- Toggle between teams 169A, 169B, 169X, 169Y, and 169Z
+- Each team has a unique color theme (A=Blue, B=Purple, X=Red, Y=Green, Z=Orange)
+- "View All Teams" option for organization-wide perspective
+
+#### Live Competition Panel
+- **LIVE** badge when event is happening
+- Next match countdown timer ("Match in 23 minutes")
+- Real-time match tracking with scores
+- Quick stats: Current Rank, Win Rate, Average Score
+
+#### Smart Rankings Leaderboard
+- Top 30 teams displayed with color-coded rows
+- Your team(s) highlighted with glow effect
+- Visual indicators: 🥇🥈🥉 for top 3 positions
+- Win Points (WP), Autonomous Points (AP), and Skill Points (SP) shown
+
+#### Predictive Analytics
+- **Win Next X Matches Calculator** - Interactive slider to see projected rankings
+- **Qualification Probability Meter** - Shows likelihood (0-100%) of qualifying
+- **Alliance Selection Chances** - Estimates probability of being top 8 captain
+- Smart algorithms calculate predictions based on current performance
+
+#### Performance Statistics
+- **Win/Loss/Tie Record** - Doughnut chart with visual breakdown
+- **Performance Trend Graph** - Line chart showing score progression
+- **Match History Timeline** - Color-coded results for each match
+- **Scoring Consistency** - Standard deviation analysis
+
+#### Visual Design
+- Modern glassmorphism cards with backdrop blur
+- Animated number counters and smooth transitions
+- Gradient backgrounds matching team colors
+- Pulsing animations for live elements
+- Fully responsive (mobile, tablet, desktop)
+- Dark mode optimized
+
+#### Auto-Refresh
+- Every 30 seconds during event days
+- Every 5 minutes for non-event days
+- Manual refresh capability
+- Last updated timestamp display
+
+### 🚀 Quick Start
+
+1. **Access the dashboard:**
+   ```bash
+   # If running locally
+   npm start
+   # Then open http://localhost:3000/advanced-dashboard.html
+   
+   # Or use the deployed version
+   # Open https://robot-events-proxy.onrender.com/advanced-dashboard.html
+   ```
+
+2. **Select your team:**
+   Click one of the team buttons (169A, 169B, 169X, 169Y, 169Z)
+
+3. **Choose an event:**
+   Select an event from the dropdown menu
+
+4. **View analytics:**
+   Explore live stats, rankings, predictions, and performance metrics!
+
+### 📊 New API Endpoints
+
+The advanced dashboard uses several new API endpoints:
+
+#### Get Event Rankings
+```bash
+GET /api/events/:eventId/rankings
+```
+Returns the complete leaderboard for an event with all team rankings.
+
+**Example:**
+```bash
+curl https://robot-events-proxy.onrender.com/api/events/12345/rankings
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "rank": 1,
+      "team": {
+        "id": 123,
+        "name": "169B"
+      },
+      "wins": 10,
+      "losses": 2,
+      "ties": 0,
+      "wp": 20,
+      "ap": 450,
+      "sp": 320
+    }
+  ]
+}
+```
+
+#### Get Live Matches
+```bash
+GET /api/events/:eventId/matches/live
+```
+Returns matches currently in progress and upcoming matches in the next 30 minutes.
+
+**Example:**
+```bash
+curl https://robot-events-proxy.onrender.com/api/events/12345/matches/live
+```
+
+**Response:**
+```json
+{
+  "live": [
+    {
+      "id": 1,
+      "name": "Q15",
+      "scheduled": "2024-11-15T10:30:00Z",
+      "field": "Main",
+      "alliances": [...]
+    }
+  ],
+  "next": [
+    {
+      "id": 2,
+      "name": "Q16",
+      "scheduled": "2024-11-15T10:35:00Z"
+    }
+  ],
+  "timestamp": "2024-11-15T10:31:45Z"
+}
+```
+
+#### Get Team Statistics
+```bash
+GET /api/teams/:teamNumber/stats?eventId=:eventId
+```
+Calculates comprehensive statistics for a team at a specific event.
+
+**Example:**
+```bash
+curl "https://robot-events-proxy.onrender.com/api/teams/169B/stats?eventId=12345"
+```
+
+**Response:**
+```json
+{
+  "teamNumber": "169B",
+  "eventId": 12345,
+  "stats": {
+    "matchesPlayed": 8,
+    "wins": 6,
+    "losses": 2,
+    "ties": 0,
+    "winRate": 75.0,
+    "avgScore": 125.5,
+    "totalScore": 1004,
+    "highScore": 145,
+    "lowScore": 98,
+    "consistency": 12.3,
+    "scores": [120, 125, 98, 145, 130, 122, 118, 146]
+  }
+}
+```
+
+#### Get Ranking Predictions
+```bash
+GET /api/events/:eventId/teams/:teamNumber/predictions
+```
+Predicts final rankings based on current performance and remaining matches.
+
+**Example:**
+```bash
+curl https://robot-events-proxy.onrender.com/api/events/12345/teams/169B/predictions
+```
+
+**Response:**
+```json
+{
+  "teamNumber": "169B",
+  "eventId": 12345,
+  "currentRank": 5,
+  "currentWP": 16,
+  "currentAP": 385,
+  "remainingMatches": 4,
+  "predictions": [
+    {
+      "winsNeeded": 0,
+      "projectedWP": 16,
+      "projectedAP": 435,
+      "estimatedRank": 6
+    },
+    {
+      "winsNeeded": 1,
+      "projectedWP": 18,
+      "projectedAP": 510,
+      "estimatedRank": 4
+    },
+    {
+      "winsNeeded": 2,
+      "projectedWP": 20,
+      "projectedAP": 585,
+      "estimatedRank": 2
+    }
+  ],
+  "qualificationProbability": 85,
+  "allianceSelectionChance": 65,
+  "totalTeams": 48
+}
+```
+
+### 🧮 How Predictions Work
+
+The advanced dashboard uses sophisticated algorithms to calculate predictions:
+
+1. **Win Rate Analysis**
+   - Calculates historical win rate from completed matches
+   - Factors in opponent strength (where available)
+
+2. **Score Trending**
+   - Tracks average score and consistency (standard deviation)
+   - Projects future performance based on trends
+
+3. **Ranking Projection**
+   - Simulates different win scenarios (0, 1, 2, 3+ wins)
+   - Estimates final rank based on projected Win Points (WP) and Autonomous Points (AP)
+   - Compares against all other teams' current standings
+
+4. **Qualification Probability**
+   - Top 30 teams typically qualify for eliminations
+   - Probability calculated based on distance from cutoff
+   - Factors in remaining matches and current trajectory
+
+5. **Alliance Selection Likelihood**
+   - Top 8 teams become alliance captains
+   - Calculates probability based on current rank and point differential
+   - Higher certainty for teams solidly in top 8, lower for borderline teams
+
+### 🎨 Dashboard Comparison
+
+| Feature | codepen-template.html | multi-team-dashboard.html | advanced-dashboard.html |
+|---------|----------------------|---------------------------|------------------------|
+| Live Status | ❌ | ❌ | ✅ LIVE badge & countdown |
+| Rankings | ❌ | ❌ | ✅ Top 30 leaderboard |
+| Predictions | ❌ | ❌ | ✅ Full analytics |
+| Statistics | Basic | Basic | ✅ Comprehensive |
+| Charts/Graphs | ❌ | ❌ | ✅ Multiple visualizations |
+| Team Selector | Single | Multiple | ✅ Multiple with themes |
+| Auto-Refresh | 5 min | 5 min | ✅ 30s during events |
+| Design Style | Standard | Standard | ✅ Glassmorphism |
+| Mobile Support | ✅ | ✅ | ✅ Fully responsive |
+| Use Case | Quick view | Organization | Live competition tracking |
+
+### 📱 Mobile Experience
+
+The advanced dashboard is fully optimized for mobile devices:
+- Responsive grid layout (stacks vertically on small screens)
+- Touch-friendly controls and buttons
+- Optimized font sizes and spacing
+- Charts scale appropriately
+- Maintains performance on slower connections
+
+### 🔧 Customization
+
+To customize the dashboard for your teams:
+
+1. **Update team list** (in advanced-dashboard.html):
+   ```javascript
+   const TEAMS = ['169A', '169B', '169X', '169Y', '169Z'];
+   ```
+
+2. **Change team colors**:
+   ```javascript
+   const TEAM_COLORS = {
+       '169A': '#2196F3',  // Blue
+       '169B': '#9C27B0',  // Purple
+       '169X': '#F44336',  // Red
+       '169Y': '#4CAF50',  // Green
+       '169Z': '#FF9800'   // Orange
+   };
+   ```
+
+3. **Adjust refresh intervals**:
+   ```javascript
+   const interval = isLive ? 30000 : 300000; // 30s or 5min
+   ```
+
+### 💡 Pro Tips
+
+1. **During Competitions:**
+   - Keep the dashboard open on a tablet or second monitor
+   - Use the 30-second auto-refresh to stay updated
+   - Watch the countdown timer to never miss a match
+
+2. **Strategic Planning:**
+   - Use the prediction calculator to plan match strategies
+   - Monitor qualification probability to know when you're safe
+   - Check alliance selection chances for captain selection strategy
+
+3. **Performance Analysis:**
+   - Review the performance trend graph to identify improvement areas
+   - Check consistency metric to ensure reliable scoring
+   - Compare your stats against top-ranked teams
+
 ## Project Structure
 
 ```
@@ -496,8 +807,9 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;                          // Refresh ever
 ├── .env.example                 # Environment variable template
 ├── .gitignore                   # Git ignore rules
 ├── README.md                    # This file
-├── codepen-template.html        # Single-team dashboard
+├── codepen-template.html        # Single-team dashboard (simple)
 ├── multi-team-dashboard.html    # Multi-team organization dashboard
+├── advanced-dashboard.html      # Advanced live competition dashboard with analytics
 └── gitbook-embed.md             # GitBook embedding guide
 ```
 
