@@ -54,7 +54,7 @@ curl https://robot-events-proxy.onrender.com/api/teams/169B
 ```
 GET /api/teams/:teamNumber/events
 ```
-Get upcoming events for a team, automatically filtered and sorted by date.
+Get upcoming events for a team, automatically filtered and sorted by date. Events are filtered to show only those starting from the current season (2024-2025) by default.
 
 **Parameters:**
 - `teamNumber` - The team number (e.g., "169B")
@@ -62,6 +62,7 @@ Get upcoming events for a team, automatically filtered and sorted by date.
 **Query Parameters:**
 - `season` (optional) - Filter by season ID
 - `level` (optional) - Filter by competition level (e.g., "World", "State")
+- `start` (optional) - Filter events starting from this date (ISO format: YYYY-MM-DD). Defaults to "2024-06-01" for the current season.
 
 **Example:**
 ```bash
@@ -100,6 +101,41 @@ Get detailed information about a specific event.
 **Example:**
 ```bash
 curl https://robot-events-proxy.onrender.com/api/events/12345
+```
+
+### Get Event by SKU
+```
+GET /api/events/sku/:eventSku
+```
+Look up an event by its SKU code. This is useful for finding the numeric event ID when you only have the SKU.
+
+**Parameters:**
+- `eventSku` - The event SKU code (e.g., "RE-V5RC-25-0005")
+
+**Example:**
+```bash
+curl https://robot-events-proxy.onrender.com/api/events/sku/RE-V5RC-25-0005
+```
+
+**Example Response:**
+```json
+{
+  "data": [
+    {
+      "id": 54321,
+      "sku": "RE-V5RC-25-0005",
+      "name": "VEX Robotics Competition Event",
+      "start": "2025-01-15T00:00:00Z",
+      "end": "2025-01-15T23:59:59Z",
+      "location": {
+        "venue": "Event Center",
+        "city": "Example City",
+        "region": "State",
+        "country": "United States"
+      }
+    }
+  ]
+}
 ```
 
 ### Get Team Matches at Event
