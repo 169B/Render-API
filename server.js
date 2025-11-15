@@ -331,12 +331,6 @@ app.get('/api/teams/multiple', async (req, res) => {
       });
     });
     
-    // Convert to array and filter for upcoming events
-    const now = new Date();
-    const upcomingEvents = Array.from(eventMap.values())
-      .filter(event => new Date(event.start) >= now)
-      .sort((a, b) => new Date(a.start) - new Date(b.start));
-
     // Convert to array and filter for upcoming events (include events happening today)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
