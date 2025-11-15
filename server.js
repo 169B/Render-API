@@ -96,11 +96,19 @@ app.get('/api/teams/:teamNumber/events', async (req, res) => {
       }
     );
     
-    // Filter for upcoming events and sort by date
+
+
+    // Filter for upcoming events and sort by date (include events happening today)
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // Set to start of day
     const upcomingEvents = eventsResponse.data.data
-      .filter(event => new Date(event.start) >= now)
+      .filter(event => {
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= now;
+      })
       .sort((a, b) => new Date(a.start) - new Date(b.start));
+
     
     res.json({
       ...eventsResponse.data,
@@ -327,6 +335,17 @@ app.get('/api/teams/multiple', async (req, res) => {
     const now = new Date();
     const upcomingEvents = Array.from(eventMap.values())
       .filter(event => new Date(event.start) >= now)
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    // Convert to array and filter for upcoming events (include events happening today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingEvents = Array.from(eventMap.values())
+      .filter(event => {
+        const eventDate = new Date(event.start);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      })
       .sort((a, b) => new Date(a.start) - new Date(b.start));
     
     res.json({
