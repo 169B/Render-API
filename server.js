@@ -10,8 +10,18 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files (HTML dashboards)
-app.use(express.static('.'));
+// Serve only HTML dashboard files (not the entire directory)
+app.get('/codepen-template.html', (req, res) => {
+  res.sendFile(__dirname + '/codepen-template.html');
+});
+
+app.get('/multi-team-dashboard.html', (req, res) => {
+  res.sendFile(__dirname + '/multi-team-dashboard.html');
+});
+
+app.get('/advanced-dashboard.html', (req, res) => {
+  res.sendFile(__dirname + '/advanced-dashboard.html');
+});
 
 // RobotEvents API configuration
 const ROBOTEVENTS_API_BASE = 'https://www.robotevents.com/api/v2';
