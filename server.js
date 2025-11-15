@@ -213,6 +213,102 @@ app.get('/api/events/:eventId/teams/:teamNumber/rankings', async (req, res) => {
   }
 });
 
+// Get combined events for multiple teams
+app.get('/api/teams/multiple', async (req, res) => {
+  try {
+    const { teams } = req.query;
+    
+    if (!teams) {
+      return res.status(400).json({ error: 'Teams parameter is required (comma-separated team numbers)' });
+    }
+    
+    const teamNumbers = teams.split(',').map(t => t.trim()).filter(t => t);
+    
+    if (teamNumbers.length === 0) {
+      return res.status(400).json({ error: 'At least one team number must be provided' });
+    }
+    
+    // Fetch events for all teams in parallel
+    const teamEventsPromises = teamNumbers.map(async (teamNumber) => {
+      try {
+        // Get team ID
+        const teamResponse = await axios.get(
+          `${ROBOTEVENTS_API_BASE}/teams`,
+          {
+            headers: robotEventsHeaders,
+            params: { number: teamNumber }
+          }
+        );
+        
+        if (!teamResponse.data.data || teamResponse.data.data.length === 0) {
+          return { teamNumber, events: [] };
+        }
+        
+        const teamId = teamResponse.data.data[0].id;
+        
+        // Get events for the team
+        const eventsResponse = await axios.get(
+          `${ROBOTEVENTS_API_BASE}/events`,
+          {
+            headers: robotEventsHeaders,
+            params: { team_id: teamId }
+          }
+        );
+        
+        return { 
+          teamNumber, 
+          teamId,
+          events: eventsResponse.data.data || [] 
+        };
+      } catch (error) {
+        console.error(`Error fetching events for team ${teamNumber}:`, error.message);
+        return { teamNumber, events: [] };
+      }
+    });
+    
+    const teamEventsResults = await Promise.all(teamEventsPromises);
+    
+    // Combine and deduplicate events
+    const eventMap = new Map();
+    
+    teamEventsResults.forEach(({ teamNumber, events }) => {
+      events.forEach(event => {
+        if (eventMap.has(event.id)) {
+          // Event already exists, add this team to the registered teams list
+          eventMap.get(event.id).registeredTeams.push(teamNumber);
+        } else {
+          // New event, add it with this team
+          eventMap.set(event.id, {
+            ...event,
+            registeredTeams: [teamNumber]
+          });
+        }
+      });
+    });
+    
+    // Convert to array and filter for upcoming events
+    const now = new Date();
+    const upcomingEvents = Array.from(eventMap.values())
+      .filter(event => new Date(event.start) >= now)
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+    
+    res.json({
+      data: upcomingEvents,
+      meta: {
+        totalTeams: teamNumbers.length,
+        teams: teamNumbers,
+        totalEvents: upcomingEvents.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching multiple team events:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to fetch events for multiple teams',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`VEX Robotics Dashboard API running on port ${PORT}`);
 });

@@ -163,6 +163,46 @@ Get the current rankings for a team at a specific event.
 curl https://robot-events-proxy.onrender.com/api/events/12345/teams/169B/rankings
 ```
 
+### Get Combined Events for Multiple Teams
+```
+GET /api/teams/multiple
+```
+Get combined upcoming events for multiple teams from the same organization. Events are automatically deduplicated, filtered for upcoming dates, and sorted chronologically. Each event includes information about which teams are registered.
+
+**Query Parameters:**
+- `teams` (required) - Comma-separated list of team numbers (e.g., "169A,169B,169X,169Y,169Z")
+
+**Example:**
+```bash
+curl "https://robot-events-proxy.onrender.com/api/teams/multiple?teams=169A,169B,169X,169Y,169Z"
+```
+
+**Example Response:**
+```json
+{
+  "data": [
+    {
+      "id": 12345,
+      "name": "VEX Robotics World Championship",
+      "start": "2024-04-25T00:00:00Z",
+      "end": "2024-04-27T00:00:00Z",
+      "location": {
+        "venue": "Kay Bailey Hutchison Convention Center",
+        "city": "Dallas",
+        "region": "Texas",
+        "country": "United States"
+      },
+      "registeredTeams": ["169A", "169B", "169Z"]
+    }
+  ],
+  "meta": {
+    "totalTeams": 5,
+    "teams": ["169A", "169B", "169X", "169Y", "169Z"],
+    "totalEvents": 8
+  }
+}
+```
+
 ## Setup Instructions
 
 ### Getting a RobotEvents API Token
@@ -324,17 +364,105 @@ Want to embed the dashboard in your team's GitBook documentation? See `gitbook-e
 - Configuring auto-refresh behavior
 - Best practices for documentation
 
+## Multi-Team Dashboard
+
+The **multi-team-dashboard.html** provides an organization-wide view for robotics programs with multiple teams. Perfect for organizations like 169 Robotics that manage teams 169A, 169B, 169X, 169Y, and 169Z.
+
+### Features
+
+- **Organization-Wide View** - See combined events from all your teams in one dashboard
+- **Smart Deduplication** - Events where multiple teams are registered appear once with team badges
+- **Team Statistics** - View total events and per-team event counts at a glance
+- **Team Selector** - When viewing an event, choose which team's matches to display
+- **Color-Coded Badges** - Easily identify which teams are registered for each event
+- **Auto-Refresh** - Updates every 5 minutes to keep data current
+- **Beautiful Design** - Same purple gradient theme as the single-team dashboard
+
+### Quick Start
+
+1. **Download the file:**
+   ```bash
+   wget https://raw.githubusercontent.com/169B/Render-API/main/multi-team-dashboard.html
+   ```
+
+2. **Configure your teams:**
+   Open `multi-team-dashboard.html` in a text editor and update the team configuration at the top of the JavaScript section:
+   ```javascript
+   const TEAM_NUMBERS = ['169A', '169B', '169X', '169Y', '169Z'];
+   ```
+   Replace with your organization's team numbers.
+
+3. **Open in browser:**
+   Simply open the HTML file in any modern web browser. No server required!
+
+### API Endpoint
+
+The multi-team dashboard uses the `/api/teams/multiple` endpoint:
+
+```bash
+# Get combined events for multiple teams
+curl "https://robot-events-proxy.onrender.com/api/teams/multiple?teams=169A,169B,169X"
+```
+
+**Key Features of the Endpoint:**
+- Accepts comma-separated team numbers via `teams` query parameter
+- Fetches events for all teams in parallel
+- Deduplicates events (same event registered by multiple teams)
+- Filters for upcoming events only
+- Sorts by start date
+- Includes `registeredTeams` array showing which teams are at each event
+
+### Customization
+
+You can customize the dashboard by editing the configuration variables:
+
+```javascript
+// Update these in the <script> section
+const TEAM_NUMBERS = ['169A', '169B', '169X', '169Y', '169Z'];  // Your team numbers
+const API_BASE = 'https://robot-events-proxy.onrender.com';      // API endpoint
+const REFRESH_INTERVAL = 5 * 60 * 1000;                          // Refresh every 5 minutes
+```
+
+### Example Use Cases
+
+**Scenario 1: Competition Planning**
+- View all upcoming competitions across your organization
+- See which teams are registered for each event
+- Plan travel and logistics based on overlapping events
+
+**Scenario 2: Coach/Mentor Dashboard**
+- Monitor all teams from a single view
+- Quickly access match schedules for any team at any event
+- Track total event participation across the program
+
+**Scenario 3: Parent Dashboard**
+- See all competitions for your organization's teams
+- Get event details and locations
+- View match schedules when teams compete
+
+### Comparison: Single vs Multi-Team Dashboard
+
+| Feature | codepen-template.html | multi-team-dashboard.html |
+|---------|----------------------|---------------------------|
+| Teams Supported | Single team | Multiple teams |
+| Event Display | Team's events only | Combined from all teams |
+| Team Badges | N/A | Shows which teams per event |
+| Statistics | Basic event list | Team statistics + totals |
+| Team Selector | N/A | Choose team for matches |
+| Use Case | Individual team | Organization-wide |
+
 ## Project Structure
 
 ```
 .
-├── server.js           # Main Express server with API endpoints
-├── package.json        # Dependencies and scripts
-├── .env.example        # Environment variable template
-├── .gitignore         # Git ignore rules
-├── README.md          # This file
-├── codepen-template.html   # Complete dashboard HTML/CSS/JS
-└── gitbook-embed.md   # GitBook embedding guide
+├── server.js                    # Main Express server with API endpoints
+├── package.json                 # Dependencies and scripts
+├── .env.example                 # Environment variable template
+├── .gitignore                   # Git ignore rules
+├── README.md                    # This file
+├── codepen-template.html        # Single-team dashboard
+├── multi-team-dashboard.html    # Multi-team organization dashboard
+└── gitbook-embed.md             # GitBook embedding guide
 ```
 
 ## Dependencies
