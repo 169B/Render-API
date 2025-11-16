@@ -775,15 +775,66 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
       );
       rankings = rankingsResponse.data.data || [];
       teamRanking = rankings.find(r => r.team.id === teamId);
+      
+      // Handle 404s gracefully
+      if (rankings.length === 0) {
+        console.log(`Rankings not available for event: ${eventId}`);
+        return res.status(404).json({ 
+          error: 'Rankings not published for this event',
+          message: 'This event may not have published results yet'
+        });
+      }
     } catch (err) {
       console.log('Rankings not available for event:', eventId);
+      return res.status(404).json({ 
+        error: 'Rankings not available',
+        message: 'This event may not have published results yet'
+      });
     }
     
     // Get all matches
-    const divisionsResponse = await axios.get(
-      `${ROBOTEVENTS_API_BASE}/events/${eventId}/divisions`,
-      { headers: robotEventsHeaders }
-    );
+    let divisionsResponse;
+    try {
+      divisionsResponse = await axios.get(
+        `${ROBOTEVENTS_API_BASE}/events/${eventId}/divisions`,
+        { headers: robotEventsHeaders }
+      );
+    } catch (err) {
+      console.log(`Divisions not available for event: ${eventId}`);
+      // Return partial data without matches
+      return res.json({
+        teamNumber,
+        eventId,
+        event: event,
+        finalRank: teamRanking?.rank,
+        totalTeams: rankings ? rankings.length : null,
+        record: { wins: 0, losses: 0, ties: 0, matchesPlayed: 0 },
+        scores: { total: 0, average: 0, high: 0, low: 0, consistency: 0 },
+        performance: { winRate: 0, avgOpponentScore: 0, scoreDifferential: 0 },
+        ranking: teamRanking,
+        matches: [],
+        awards: []
+      });
+    }
+    
+    // Handle missing divisions
+    if (!divisionsResponse.data || divisionsResponse.data.data.length === 0) {
+      console.log(`Divisions not available for event: ${eventId}`);
+      // Return partial data without matches
+      return res.json({
+        teamNumber,
+        eventId,
+        event: event,
+        finalRank: teamRanking?.rank,
+        totalTeams: rankings ? rankings.length : null,
+        record: { wins: 0, losses: 0, ties: 0, matchesPlayed: 0 },
+        scores: { total: 0, average: 0, high: 0, low: 0, consistency: 0 },
+        performance: { winRate: 0, avgOpponentScore: 0, scoreDifferential: 0 },
+        ranking: teamRanking,
+        matches: [],
+        awards: []
+      });
+    }
     
     const allMatches = [];
     for (const division of divisionsResponse.data.data) {
