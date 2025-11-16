@@ -536,6 +536,24 @@
             margin: 20px 0;
         }
 
+        .loading-batch {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        .rate-limit-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff9800;
+            margin: 20px 0;
+            text-align: center;
+        }
+
         /* Animations */
         @keyframes fadeIn {
             from {
@@ -715,6 +733,95 @@
         let allCompetitions = [];
         let viewMode = 'single'; // 'single' or 'all'
 
+        // Rate limiting configuration
+        const RATE_LIMIT = {
+            requestsPerSecond: 2,  // Max 2 requests per second
+            delayBetweenRequests: 600, // 600ms delay between requests
+            maxConcurrent: 3,      // Max 3 concurrent requests
+            retryDelay: 2000,      // 2 seconds before retry
+            maxRetries: 2          // Retry failed requests twice
+        };
+
+        let requestQueue = [];
+        let activeRequests = 0;
+        let lastRequestTime = 0;
+
+        // Throttled fetch with rate limiting
+        async function throttledFetch(url, options = {}) {
+            return new Promise((resolve, reject) => {
+                requestQueue.push({ url, options, resolve, reject });
+                processQueue();
+            });
+        }
+
+        async function processQueue() {
+            if (requestQueue.length === 0 || activeRequests >= RATE_LIMIT.maxConcurrent) {
+                return;
+            }
+
+            const now = Date.now();
+            const timeSinceLastRequest = now - lastRequestTime;
+            
+            if (timeSinceLastRequest < RATE_LIMIT.delayBetweenRequests) {
+                setTimeout(processQueue, RATE_LIMIT.delayBetweenRequests - timeSinceLastRequest);
+                return;
+            }
+
+            const request = requestQueue.shift();
+            activeRequests++;
+            lastRequestTime = Date.now();
+
+            try {
+                const response = await fetch(request.url, request.options);
+                
+                if (response.status === 429) {
+                    // Rate limited - retry after delay
+                    console.warn(`Rate limited on ${request.url}, retrying...`);
+                    await sleep(RATE_LIMIT.retryDelay);
+                    requestQueue.unshift(request); // Put back at front of queue
+                    activeRequests--;
+                    processQueue();
+                    return;
+                }
+                
+                request.resolve(response);
+            } catch (error) {
+                request.reject(error);
+            } finally {
+                activeRequests--;
+                setTimeout(processQueue, RATE_LIMIT.delayBetweenRequests);
+            }
+        }
+
+        // Sleep utility
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Fetch with retry logic
+        async function fetchWithRetry(url, retries = RATE_LIMIT.maxRetries) {
+            try {
+                const response = await throttledFetch(url);
+                
+                if (!response.ok && response.status !== 404) {
+                    if (retries > 0 && (response.status === 429 || response.status >= 500)) {
+                        console.warn(`Request failed (${response.status}), retrying... (${retries} attempts left)`);
+                        await sleep(RATE_LIMIT.retryDelay);
+                        return fetchWithRetry(url, retries - 1);
+                    }
+                }
+                
+                return response;
+            } catch (error) {
+                if (retries > 0) {
+                    console.warn(`Request error, retrying... (${retries} attempts left)`);
+                    await sleep(RATE_LIMIT.retryDelay);
+                    return fetchWithRetry(url, retries - 1);
+                }
+                throw error;
+            }
+        }
+
         // Initialize
         async function init() {
             await loadPastCompetitions();
@@ -726,33 +833,98 @@
             container.innerHTML = '<div class="loading">Loading past competitions</div>';
 
             try {
-                const response = await fetch(`${API_BASE}/api/teams/${currentTeam}/events/past`);
+                const response = await fetchWithRetry(`${API_BASE}/api/teams/${currentTeam}/events/past`);
                 const data = await response.json();
                 
                 allCompetitions = data.data || [];
                 
-                // Load stats for each competition
-                const competitionsWithStats = await Promise.all(
-                    allCompetitions.slice(0, 20).map(async (event) => {
-                        try {
-                            const statsResponse = await fetch(
-                                `${API_BASE}/api/events/${event.id}/teams/${currentTeam}/full-stats`
-                            );
-                            const stats = await statsResponse.json();
-                            return { ...event, stats };
-                        } catch (error) {
-                            console.error(`Error loading stats for event ${event.id}:`, error);
-                            return { ...event, stats: null };
-                        }
-                    })
-                );
+                if (allCompetitions.length === 0) {
+                    container.innerHTML = '<div class="no-data">No past competitions found for this team</div>';
+                    return;
+                }
                 
-                allCompetitions = competitionsWithStats;
-                filterCompetitions();
+                // Show events immediately without stats
+                displayCompetitionsLoading(allCompetitions);
+                
+                // Load stats progressively with delays
+                const competitionsWithStats = [];
+                const batchSize = 3; // Process 3 events at a time
+                
+                for (let i = 0; i < Math.min(allCompetitions.length, 20); i += batchSize) {
+                    const batch = allCompetitions.slice(i, i + batchSize);
+                    
+                    const batchResults = await Promise.all(
+                        batch.map(async (event) => {
+                            try {
+                                const statsResponse = await fetchWithRetry(
+                                    `${API_BASE}/api/events/${event.id}/teams/${currentTeam}/full-stats`
+                                );
+                                
+                                if (statsResponse.status === 404) {
+                                    console.log(`No stats available for event: ${event.id}`);
+                                    return { ...event, stats: null };
+                                }
+                                
+                                const stats = await statsResponse.json();
+                                return { ...event, stats };
+                            } catch (error) {
+                                console.error(`Error loading stats for event ${event.id}:`, error);
+                                return { ...event, stats: null };
+                            }
+                        })
+                    );
+                    
+                    competitionsWithStats.push(...batchResults);
+                    
+                    // Update display after each batch
+                    allCompetitions = [...competitionsWithStats, ...allCompetitions.slice(competitionsWithStats.length)];
+                    filterCompetitions();
+                    
+                    // Delay between batches
+                    if (i + batchSize < Math.min(allCompetitions.length, 20)) {
+                        await sleep(1000); // 1 second between batches
+                    }
+                }
+                
             } catch (error) {
                 console.error('Error loading past competitions:', error);
-                container.innerHTML = '<div class="error">Failed to load past competitions. Please try again.</div>';
+                container.innerHTML = '<div class="error">Failed to load past competitions. Please try again later.</div>';
             }
+        }
+
+        // Display competitions with loading indicators
+        function displayCompetitionsLoading(competitions) {
+            const container = document.getElementById('competitionsContainer');
+            
+            const html = `
+                <div class="competitions-grid">
+                    ${competitions.map(comp => createCompetitionCardLoading(comp)).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Create competition card with loading state
+        function createCompetitionCardLoading(comp) {
+            if (!comp.stats) {
+                return `
+                    <div class="competition-card">
+                        <div class="competition-header">
+                            <div class="competition-name">${comp.name}</div>
+                            <div class="competition-location">
+                                📍 ${comp.location?.city || ''}, ${comp.location?.region || ''}
+                            </div>
+                            <div class="competition-date">
+                                📅 ${formatDate(comp.start)} - ${formatDate(comp.end)}
+                            </div>
+                        </div>
+                        <div class="loading" style="padding: 20px; font-size: 0.9em;">Loading stats</div>
+                    </div>
+                `;
+            }
+            
+            return createCompetitionCard(comp);
         }
 
         // Filter competitions based on search and season
@@ -899,14 +1071,28 @@
             // Load detailed stats if not already loaded
             if (!competition.stats) {
                 try {
-                    const response = await fetch(
+                    // Add delay before fetching
+                    await sleep(500);
+                    
+                    const response = await fetchWithRetry(
                         `${API_BASE}/api/events/${eventId}/teams/${currentTeam}/full-stats`
                     );
+                    
+                    if (response.status === 404) {
+                        document.getElementById('modalStats').innerHTML = 
+                            '<div class="no-data">Statistics not available for this event</div>';
+                        document.getElementById('modalMatches').innerHTML = 
+                            '<div class="no-data">Match details not available for past events</div>';
+                        return;
+                    }
+                    
                     competition.stats = await response.json();
                 } catch (error) {
                     console.error('Error loading detailed stats:', error);
                     document.getElementById('modalStats').innerHTML = 
-                        '<div class="error">Failed to load statistics</div>';
+                        '<div class="error">Failed to load statistics. Please try again.</div>';
+                    document.getElementById('modalMatches').innerHTML = 
+                        '<div class="error">Failed to load match details.</div>';
                     return;
                 }
             }
