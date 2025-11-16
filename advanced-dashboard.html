@@ -515,6 +515,44 @@
             background: var(--team-169b-color);
             cursor: pointer;
         }
+
+        /* Match History Toggle Buttons */
+        .match-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .toggle-btn {
+            padding: 8px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .toggle-btn.active {
+            background: var(--team-169b-color);
+            border-color: var(--team-169b-color);
+            color: white;
+        }
+
+        .match-item.upcoming {
+            border-left-color: #2196F3;
+        }
+
+        .match-item.past {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -637,6 +675,10 @@
 
             <div class="card">
                 <h2>🎯 Match History</h2>
+                <div class="match-toggle">
+                    <button class="toggle-btn active" id="upcomingBtn" onclick="toggleMatchView('upcoming')">Upcoming</button>
+                    <button class="toggle-btn" id="pastBtn" onclick="toggleMatchView('past')">Past Matches</button>
+                </div>
                 <div class="match-timeline" id="matchHistory">
                     <div class="no-data">No match history available</div>
                 </div>
@@ -664,6 +706,8 @@
         let refreshInterval = null;
         let eventsList = [];
         let predictionsData = null;
+        let matchViewMode = 'upcoming'; // 'upcoming' or 'past'
+        let allMatchesData = []; // Store all matches
 
         // Initialize dashboard
         async function initDashboard() {
@@ -708,7 +752,8 @@
                 loadLiveStatus(),
                 loadRankings(),
                 loadTeamStats(),
-                loadPredictions()
+                loadPredictions(),
+                loadAllMatches()
             ]);
 
             // Set refresh interval based on event date
@@ -1013,27 +1058,123 @@
             });
         }
 
-        // Update match history
+        // Update match history (called from loadTeamStats)
         function updateMatchHistory(stats) {
+            // Load all matches when stats are loaded
+            loadAllMatches();
+        }
+
+        // Toggle between upcoming and past matches
+        function toggleMatchView(mode) {
+            matchViewMode = mode;
+            
+            // Update button states
+            document.getElementById('upcomingBtn').classList.toggle('active', mode === 'upcoming');
+            document.getElementById('pastBtn').classList.toggle('active', mode === 'past');
+            
+            // Re-render match history with current mode
+            displayMatchHistory(allMatchesData);
+        }
+
+        // Load all matches for the team at this event
+        async function loadAllMatches() {
+            if (!currentEvent) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/events/${currentEvent.id}/teams/${currentTeam}/matches`);
+                const data = await response.json();
+                allMatchesData = data.data || [];
+                
+                // Sort by scheduled time
+                allMatchesData.sort((a, b) => {
+                    if (!a.scheduled || !b.scheduled) return 0;
+                    return new Date(a.scheduled) - new Date(b.scheduled);
+                });
+                
+                displayMatchHistory(allMatchesData);
+            } catch (error) {
+                console.error('Error loading all matches:', error);
+            }
+        }
+
+        // Display match history based on current view mode
+        function displayMatchHistory(matches) {
             const matchHistory = document.getElementById('matchHistory');
             
-            if (!stats.scores || stats.scores.length === 0) {
-                matchHistory.innerHTML = '<div class="no-data">No match history available</div>';
+            if (!matches || matches.length === 0) {
+                matchHistory.innerHTML = '<div class="no-data">No matches available</div>';
                 return;
             }
-
-            // We don't have individual match results, so create a simplified view
+            
+            const now = new Date();
+            let filteredMatches;
+            
+            if (matchViewMode === 'upcoming') {
+                // Show upcoming/unscored matches
+                filteredMatches = matches.filter(match => {
+                    if (!match.scheduled) return true;
+                    return !match.scored || new Date(match.scheduled) > now;
+                });
+            } else {
+                // Show past/completed matches (reverse order - most recent first)
+                filteredMatches = matches.filter(match => match.scored).reverse();
+            }
+            
+            if (filteredMatches.length === 0) {
+                const message = matchViewMode === 'upcoming' ? 'No upcoming matches' : 'No past matches yet';
+                matchHistory.innerHTML = `<div class="no-data">${message}</div>`;
+                return;
+            }
+            
             let html = '';
-            stats.scores.forEach((score, index) => {
-                const matchClass = score >= stats.avgScore ? 'win' : 'loss';
+            
+            filteredMatches.forEach(match => {
+                // Find team's alliance
+                const teamAlliance = match.alliances.find(a => 
+                    a.teams.some(t => t.team.name === currentTeam)
+                );
+                
+                if (!teamAlliance) return;
+                
+                const opponentAlliance = match.alliances.find(a => a.color !== teamAlliance.color);
+                
+                let resultClass = '';
+                let resultText = '';
+                
+                if (match.scored && opponentAlliance) {
+                    if (teamAlliance.score > opponentAlliance.score) {
+                        resultClass = 'win';
+                        resultText = '🟢 Win';
+                    } else if (teamAlliance.score < opponentAlliance.score) {
+                        resultClass = 'loss';
+                        resultText = '🔴 Loss';
+                    } else {
+                        resultClass = 'tie';
+                        resultText = '🟡 Tie';
+                    }
+                } else {
+                    resultClass = 'upcoming';
+                    resultText = '⚪ Scheduled';
+                }
+                
+                const scoreDisplay = match.scored 
+                    ? `${teamAlliance.score} - ${opponentAlliance?.score || 0}` 
+                    : 'Not played';
+                
+                const timeDisplay = match.scheduled 
+                    ? `<span style="color: var(--text-secondary); font-size: 0.85em; margin-left: 10px;">${formatTime(match.scheduled)}</span>`
+                    : '';
+                
                 html += `
-                    <div class="match-item ${matchClass}">
-                        <span class="match-name">Q${index + 1}</span>
-                        <span class="match-score">${score} pts</span>
+                    <div class="match-item ${resultClass}">
+                        <span class="match-name">${match.name}</span>
+                        <span>${resultText}</span>
+                        ${timeDisplay}
+                        <span class="match-score">${scoreDisplay}</span>
                     </div>
                 `;
             });
-
+            
             matchHistory.innerHTML = html;
         }
 
