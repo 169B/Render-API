@@ -23,6 +23,10 @@ app.get('/advanced-dashboard.html', (req, res) => {
   res.sendFile(__dirname + '/advanced-dashboard.html');
 });
 
+app.get('/past-competitions.html', (req, res) => {
+  res.sendFile(__dirname + '/past-competitions.html');
+});
+
 // RobotEvents API configuration
 const ROBOTEVENTS_API_BASE = 'https://www.robotevents.com/api/v2';
 const API_TOKEN = process.env.ROBOTEVENTS_API_TOKEN;
@@ -672,6 +676,355 @@ app.get('/api/events/:eventId/teams/:teamNumber/predictions', async (req, res) =
     console.error('Error calculating predictions:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({ 
       error: 'Failed to calculate predictions',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
+// Get past events for a team
+app.get('/api/teams/:teamNumber/events/past', async (req, res) => {
+  try {
+    const { teamNumber } = req.params;
+    
+    // Get team ID
+    const teamResponse = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/teams`,
+      {
+        headers: robotEventsHeaders,
+        params: { number: teamNumber }
+      }
+    );
+    
+    if (!teamResponse.data.data || teamResponse.data.data.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    
+    const teamId = teamResponse.data.data[0].id;
+    
+    // Get all events for the team (past events typically available from 2023 onwards)
+    const eventsResponse = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/teams/${teamId}/events`,
+      {
+        headers: robotEventsHeaders,
+        params: { start: '2023-01-01' }
+      }
+    );
+    
+    // Filter for past events (end date < today)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const pastEvents = eventsResponse.data.data
+      .filter(event => {
+        const eventEnd = new Date(event.end);
+        eventEnd.setHours(23, 59, 59, 999);
+        return eventEnd < now;
+      })
+      .sort((a, b) => new Date(b.end) - new Date(a.end)); // Most recent first
+    
+    res.json({
+      ...eventsResponse.data,
+      data: pastEvents
+    });
+  } catch (error) {
+    console.error('Error fetching past events:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to fetch past events',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
+// Get full competition statistics for a team at an event
+app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) => {
+  try {
+    const { eventId, teamNumber } = req.params;
+    
+    // Get team ID
+    const teamResponse = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/teams`,
+      {
+        headers: robotEventsHeaders,
+        params: { number: teamNumber }
+      }
+    );
+    
+    if (!teamResponse.data.data || teamResponse.data.data.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    
+    const teamId = teamResponse.data.data[0].id;
+    
+    // Get event details
+    const eventResponse = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/events/${eventId}`,
+      { headers: robotEventsHeaders }
+    );
+    
+    const event = eventResponse.data;
+    
+    // Get rankings
+    let rankings = null;
+    let teamRanking = null;
+    try {
+      const rankingsResponse = await axios.get(
+        `${ROBOTEVENTS_API_BASE}/events/${eventId}/rankings`,
+        {
+          headers: robotEventsHeaders,
+          params: { team: teamId }
+        }
+      );
+      rankings = rankingsResponse.data.data || [];
+      teamRanking = rankings.find(r => r.team.id === teamId);
+    } catch (err) {
+      console.log('Rankings not available for event:', eventId);
+    }
+    
+    // Get all matches
+    const divisionsResponse = await axios.get(
+      `${ROBOTEVENTS_API_BASE}/events/${eventId}/divisions`,
+      { headers: robotEventsHeaders }
+    );
+    
+    const allMatches = [];
+    for (const division of divisionsResponse.data.data) {
+      const matchesResponse = await axios.get(
+        `${ROBOTEVENTS_API_BASE}/events/${eventId}/divisions/${division.id}/matches`,
+        {
+          headers: robotEventsHeaders,
+          params: { team: teamId }
+        }
+      );
+      allMatches.push(...matchesResponse.data.data);
+    }
+    
+    // Sort matches by scheduled time
+    allMatches.sort((a, b) => {
+      if (!a.scheduled || !b.scheduled) return 0;
+      return new Date(a.scheduled) - new Date(b.scheduled);
+    });
+    
+    // Calculate detailed statistics
+    let wins = 0, losses = 0, ties = 0;
+    let totalScore = 0, totalOpponentScore = 0;
+    let matchesPlayed = 0;
+    const scores = [];
+    const matchDetails = [];
+    
+    allMatches.forEach(match => {
+      const teamAlliance = match.alliances.find(alliance => 
+        alliance.teams.some(t => t.team.id === teamId)
+      );
+      
+      if (!teamAlliance) return;
+      
+      const opponentAlliance = match.alliances.find(a => a.color !== teamAlliance.color);
+      
+      const matchDetail = {
+        matchName: match.name,
+        scheduled: match.scheduled,
+        scored: match.scored,
+        allianceColor: teamAlliance.color,
+        alliancePartners: teamAlliance.teams
+          .filter(t => t.team.id !== teamId)
+          .map(t => t.team.name),
+        opponents: opponentAlliance ? opponentAlliance.teams.map(t => t.team.name) : [],
+        score: teamAlliance.score,
+        opponentScore: opponentAlliance ? opponentAlliance.score : null,
+        result: null
+      };
+      
+      // Only count completed matches
+      if (match.started && match.scored) {
+        matchesPlayed++;
+        
+        if (teamAlliance.score !== undefined) {
+          totalScore += teamAlliance.score;
+          scores.push(teamAlliance.score);
+          
+          if (opponentAlliance && opponentAlliance.score !== undefined) {
+            totalOpponentScore += opponentAlliance.score;
+            
+            if (teamAlliance.score > opponentAlliance.score) {
+              wins++;
+              matchDetail.result = 'win';
+            } else if (teamAlliance.score < opponentAlliance.score) {
+              losses++;
+              matchDetail.result = 'loss';
+            } else {
+              ties++;
+              matchDetail.result = 'tie';
+            }
+          }
+        }
+      }
+      
+      matchDetails.push(matchDetail);
+    });
+    
+    const avgScore = matchesPlayed > 0 ? totalScore / matchesPlayed : 0;
+    const avgOpponentScore = matchesPlayed > 0 ? totalOpponentScore / matchesPlayed : 0;
+    const winRate = matchesPlayed > 0 ? (wins / matchesPlayed) * 100 : 0;
+    
+    // Calculate consistency (standard deviation)
+    let consistency = 0;
+    if (scores.length > 1) {
+      const variance = scores.reduce((sum, score) => {
+        return sum + Math.pow(score - avgScore, 2);
+      }, 0) / scores.length;
+      consistency = Math.sqrt(variance);
+    }
+    
+    // Get awards (if available)
+    let awards = [];
+    try {
+      const awardsResponse = await axios.get(
+        `${ROBOTEVENTS_API_BASE}/events/${eventId}/awards`,
+        { headers: robotEventsHeaders }
+      );
+      
+      awards = awardsResponse.data.data
+        .filter(award => award.team && award.team.id === teamId)
+        .map(award => ({
+          title: award.title,
+          order: award.order
+        }));
+    } catch (err) {
+      console.log('Awards not available for event:', eventId);
+    }
+    
+    res.json({
+      teamNumber,
+      eventId,
+      event: event,
+      finalRank: teamRanking ? teamRanking.rank : null,
+      totalTeams: rankings ? rankings.length : null,
+      record: {
+        wins,
+        losses,
+        ties,
+        matchesPlayed
+      },
+      scores: {
+        total: totalScore,
+        average: Math.round(avgScore * 10) / 10,
+        high: scores.length > 0 ? Math.max(...scores) : 0,
+        low: scores.length > 0 ? Math.min(...scores) : 0,
+        consistency: Math.round(consistency * 10) / 10
+      },
+      performance: {
+        winRate: Math.round(winRate * 10) / 10,
+        avgOpponentScore: Math.round(avgOpponentScore * 10) / 10,
+        scoreDifferential: Math.round((avgScore - avgOpponentScore) * 10) / 10
+      },
+      ranking: teamRanking,
+      matches: matchDetails,
+      awards: awards
+    });
+  } catch (error) {
+    console.error('Error fetching full stats:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to fetch full competition statistics',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
+// Get past events for multiple teams
+app.get('/api/teams/multiple/past-events', async (req, res) => {
+  try {
+    const { teams } = req.query;
+    
+    if (!teams) {
+      return res.status(400).json({ error: 'Teams parameter is required (comma-separated team numbers)' });
+    }
+    
+    const teamNumbers = teams.split(',').map(t => t.trim()).filter(t => t);
+    
+    if (teamNumbers.length === 0) {
+      return res.status(400).json({ error: 'At least one team number must be provided' });
+    }
+    
+    // Fetch past events for all teams in parallel
+    const teamEventsPromises = teamNumbers.map(async (teamNumber) => {
+      try {
+        // Get team ID
+        const teamResponse = await axios.get(
+          `${ROBOTEVENTS_API_BASE}/teams`,
+          {
+            headers: robotEventsHeaders,
+            params: { number: teamNumber }
+          }
+        );
+        
+        if (!teamResponse.data.data || teamResponse.data.data.length === 0) {
+          return { teamNumber, events: [] };
+        }
+        
+        const teamId = teamResponse.data.data[0].id;
+        
+        // Get events for the team
+        const eventsResponse = await axios.get(
+          `${ROBOTEVENTS_API_BASE}/teams/${teamId}/events`,
+          {
+            headers: robotEventsHeaders,
+            params: { start: '2023-01-01' }
+          }
+        );
+        
+        return { 
+          teamNumber, 
+          teamId,
+          events: eventsResponse.data.data || [] 
+        };
+      } catch (error) {
+        console.error(`Error fetching events for team ${teamNumber}:`, error.message);
+        return { teamNumber, events: [] };
+      }
+    });
+    
+    const teamEventsResults = await Promise.all(teamEventsPromises);
+    
+    // Combine and deduplicate events
+    const eventMap = new Map();
+    
+    teamEventsResults.forEach(({ teamNumber, events }) => {
+      events.forEach(event => {
+        if (eventMap.has(event.id)) {
+          // Event already exists, add this team to the registered teams list
+          eventMap.get(event.id).teams.push(teamNumber);
+        } else {
+          // New event, add it with this team
+          eventMap.set(event.id, {
+            ...event,
+            teams: [teamNumber]
+          });
+        }
+      });
+    });
+    
+    // Convert to array and filter for past events
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const pastEvents = Array.from(eventMap.values())
+      .filter(event => {
+        const eventEnd = new Date(event.end);
+        eventEnd.setHours(23, 59, 59, 999);
+        return eventEnd < now;
+      })
+      .sort((a, b) => new Date(b.end) - new Date(a.end)); // Most recent first
+    
+    res.json({
+      data: pastEvents,
+      meta: {
+        totalTeams: teamNumbers.length,
+        teamNumbers: teamNumbers,
+        totalEvents: pastEvents.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching multiple team past events:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ 
+      error: 'Failed to fetch past events for multiple teams',
       details: error.response?.data || error.message
     });
   }
