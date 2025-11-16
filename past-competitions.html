@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📜 Past Competitions Archive - VEX Robotics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --team-169a-color: #2196F3;
+            --team-169b-color: #9C27B0;
+            --team-169x-color: #F44336;
+            --team-169y-color: #4CAF50;
+            --team-169z-color: #FF9800;
+            --bg-dark: #0a0e27;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --text-primary: #ffffff;
+            --text-secondary: #b8c0e0;
+            --accent-glow: rgba(156, 39, 176, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-btn {
+            padding: 12px 24px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(156, 39, 176, 0.3);
+            background: var(--team-169b-color);
+        }
+
+        .team-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .team-btn {
+            padding: 12px 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .team-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .team-btn.active {
+            transform: translateY(-2px);
+        }
+
+        .team-btn.active.team-169a {
+            background: var(--team-169a-color);
+            border-color: var(--team-169a-color);
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.5);
+        }
+
+        .team-btn.active.team-169b {
+            background: var(--team-169b-color);
+            border-color: var(--team-169b-color);
+            box-shadow: 0 5px 20px rgba(156, 39, 176, 0.5);
+        }
+
+        .team-btn.active.team-169x {
+            background: var(--team-169x-color);
+            border-color: var(--team-169x-color);
+            box-shadow: 0 5px 20px rgba(244, 67, 54, 0.5);
+        }
+
+        .team-btn.active.team-169y {
+            background: var(--team-169y-color);
+            border-color: var(--team-169y-color);
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .team-btn.active.team-169z {
+            background: var(--team-169z-color);
+            border-color: var(--team-169z-color);
+            box-shadow: 0 5px 20px rgba(255, 152, 0, 0.5);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-select, .search-input {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 1em;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input {
+            min-width: 300px;
+        }
+
+        /* Competition Cards Grid */
+        .competitions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .competition-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .competition-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--team-169b-color);
+            box-shadow: 0 12px 40px rgba(156, 39, 176, 0.3);
+        }
+
+        .competition-header {
+            margin-bottom: 15px;
+        }
+
+        .competition-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .competition-location {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .competition-date {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .competition-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .rank-badge.top-3 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #000;
+        }
+
+        .rank-badge.top-10 {
+            background: linear-gradient(135deg, #C0C0C0, #808080);
+            color: #fff;
+        }
+
+        .rank-badge.other {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .awards-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .award-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #FFD700;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .view-details-btn {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--team-169b-color);
+            border-radius: 10px;
+            background: rgba(156, 39, 176, 0.1);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .view-details-btn:hover {
+            background: var(--team-169b-color);
+            box-shadow: 0 5px 20px rgba(156, 39, 176, 0.5);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f3a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 40px auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-title {
+            flex: 1;
+        }
+
+        .modal-title h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-modal {
+            font-size: 2em;
+            color: var(--text-secondary);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-section {
+            margin-bottom: 30px;
+        }
+
+        .modal-section h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-section h3::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            border-radius: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card-label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .stat-card-value {
+            font-size: 2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--team-169b-color), #E91E63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .matches-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .match-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            border-left: 4px solid transparent;
+        }
+
+        .match-item.win {
+            border-left-color: #4CAF50;
+        }
+
+        .match-item.loss {
+            border-left-color: #F44336;
+        }
+
+        .match-item.tie {
+            border-left-color: #FFC107;
+        }
+
+        .match-name {
+            font-weight: bold;
+            min-width: 60px;
+        }
+
+        .match-info {
+            flex: 1;
+            margin: 0 15px;
+        }
+
+        .match-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 100px;
+            text-align: right;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        /* Loading & Error States */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-secondary);
+            font-size: 1.2em;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ff5252;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ff5252;
+            margin: 20px 0;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .competitions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .search-input, .filter-select {
+                width: 100%;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        /* All Teams View */
+        .all-teams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .team-summary-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .team-summary-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .team-summary-header.team-169a {
+            color: var(--team-169a-color);
+        }
+
+        .team-summary-header.team-169b {
+            color: var(--team-169b-color);
+        }
+
+        .team-summary-header.team-169x {
+            color: var(--team-169x-color);
+        }
+
+        .team-summary-header.team-169y {
+            color: var(--team-169y-color);
+        }
+
+        .team-summary-header.team-169z {
+            color: var(--team-169z-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <h1>📜 Past Competitions Archive</h1>
+                <a href="advanced-dashboard.html" class="back-btn">← Back to Dashboard</a>
+            </div>
+
+            <div class="team-selector">
+                <button class="team-btn team-169a" onclick="selectTeam('169A')">169A</button>
+                <button class="team-btn team-169b active" onclick="selectTeam('169B')">169B</button>
+                <button class="team-btn team-169x" onclick="selectTeam('169X')">169X</button>
+                <button class="team-btn team-169y" onclick="selectTeam('169Y')">169Y</button>
+                <button class="team-btn team-169z" onclick="selectTeam('169Z')">169Z</button>
+                <button class="team-btn" onclick="selectAllTeams()">View All Teams</button>
+            </div>
+
+            <div class="filters">
+                <select class="filter-select" id="seasonFilter" onchange="filterCompetitions()">
+                    <option value="all">All Time</option>
+                    <option value="2024-2025" selected>2024-2025 Season</option>
+                    <option value="2023-2024">2023-2024 Season</option>
+                </select>
+                <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search events..." oninput="filterCompetitions()">
+            </div>
+        </div>
+
+        <!-- Competitions Grid -->
+        <div id="competitionsContainer">
+            <div class="loading">Loading past competitions</div>
+        </div>
+
+        <!-- All Teams View Container -->
+        <div id="allTeamsContainer" style="display: none;">
+            <div class="loading">Loading all teams data</div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h2 id="modalEventName">Event Name</h2>
+                    <div id="modalEventInfo" style="color: var(--text-secondary); margin-top: 10px;"></div>
+                </div>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>📊 Event Statistics</h3>
+                    <div class="stats-grid" id="modalStats"></div>
+                </div>
+
+                <div class="modal-section">
+                    <h3>📈 Performance Charts</h3>
+                    <div class="charts-container">
+                        <div class="chart-card">
+                            <canvas id="modalRecordChart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <canvas id="modalTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h3>🎯 Match History</h3>
+                    <div class="matches-list" id="modalMatches"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000'
+            : 'https://robot-events-proxy.onrender.com';
+        
+        const TEAMS = ['169A', '169B', '169X', '169Y', '169Z'];
+        const TEAM_COLORS = {
+            '169A': '#2196F3',
+            '169B': '#9C27B0',
+            '169X': '#F44336',
+            '169Y': '#4CAF50',
+            '169Z': '#FF9800'
+        };
+
+        let currentTeam = '169B';
+        let allCompetitions = [];
+        let viewMode = 'single'; // 'single' or 'all'
+
+        // Initialize
+        async function init() {
+            await loadPastCompetitions();
+        }
+
+        // Load past competitions for current team
+        async function loadPastCompetitions() {
+            const container = document.getElementById('competitionsContainer');
+            container.innerHTML = '<div class="loading">Loading past competitions</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/teams/${currentTeam}/events/past`);
+                const data = await response.json();
+                
+                allCompetitions = data.data || [];
+                
+                // Load stats for each competition
+                const competitionsWithStats = await Promise.all(
+                    allCompetitions.slice(0, 20).map(async (event) => {
+                        try {
+                            const statsResponse = await fetch(
+                                `${API_BASE}/api/events/${event.id}/teams/${currentTeam}/full-stats`
+                            );
+                            const stats = await statsResponse.json();
+                            return { ...event, stats };
+                        } catch (error) {
+                            console.error(`Error loading stats for event ${event.id}:`, error);
+                            return { ...event, stats: null };
+                        }
+                    })
+                );
+                
+                allCompetitions = competitionsWithStats;
+                filterCompetitions();
+            } catch (error) {
+                console.error('Error loading past competitions:', error);
+                container.innerHTML = '<div class="error">Failed to load past competitions. Please try again.</div>';
+            }
+        }
+
+        // Filter competitions based on search and season
+        function filterCompetitions() {
+            const seasonFilter = document.getElementById('seasonFilter').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allCompetitions.filter(comp => {
+                // Search filter
+                const matchesSearch = !searchTerm || 
+                    comp.name.toLowerCase().includes(searchTerm) ||
+                    (comp.location?.city || '').toLowerCase().includes(searchTerm);
+                
+                // Season filter
+                let matchesSeason = true;
+                if (seasonFilter !== 'all') {
+                    const eventDate = new Date(comp.start);
+                    const year = eventDate.getFullYear();
+                    const month = eventDate.getMonth();
+                    
+                    if (seasonFilter === '2024-2025') {
+                        matchesSeason = (year === 2024 && month >= 5) || year === 2025;
+                    } else if (seasonFilter === '2023-2024') {
+                        matchesSeason = (year === 2023 && month >= 5) || (year === 2024 && month < 5);
+                    }
+                }
+                
+                return matchesSearch && matchesSeason;
+            });
+            
+            displayCompetitions(filtered);
+        }
+
+        // Display competitions in grid
+        function displayCompetitions(competitions) {
+            const container = document.getElementById('competitionsContainer');
+            
+            if (competitions.length === 0) {
+                container.innerHTML = '<div class="no-data">No past competitions found</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="competitions-grid">
+                    ${competitions.map(comp => createCompetitionCard(comp)).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Create competition card HTML
+        function createCompetitionCard(comp) {
+            const stats = comp.stats;
+            const rank = stats?.finalRank || 'N/A';
+            const record = stats?.record ? 
+                `${stats.record.wins}-${stats.record.losses}-${stats.record.ties}` : 
+                'N/A';
+            const avgScore = stats?.scores?.average || 'N/A';
+            const highScore = stats?.scores?.high || 'N/A';
+            
+            let rankClass = 'other';
+            let rankEmoji = '📍';
+            if (rank <= 3) {
+                rankClass = 'top-3';
+                rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+            } else if (rank <= 10) {
+                rankClass = 'top-10';
+            }
+            
+            const awards = stats?.awards || [];
+            const awardsHTML = awards.length > 0 ? `
+                <div class="awards-list">
+                    ${awards.slice(0, 3).map(award => `
+                        <div class="award-item">🏆 ${award.title}</div>
+                    `).join('')}
+                    ${awards.length > 3 ? `<div class="award-item">+ ${awards.length - 3} more</div>` : ''}
+                </div>
+            ` : '';
+            
+            return `
+                <div class="competition-card" onclick="showDetails('${comp.id}')">
+                    <div class="competition-header">
+                        <div class="competition-name">${comp.name}</div>
+                        <div class="competition-location">
+                            📍 ${comp.location?.city || ''}, ${comp.location?.region || ''}
+                        </div>
+                        <div class="competition-date">
+                            📅 ${formatDate(comp.start)} - ${formatDate(comp.end)}
+                        </div>
+                    </div>
+                    
+                    <div class="rank-badge ${rankClass}">
+                        ${rankEmoji} Rank: #${rank}${stats?.totalTeams ? ` of ${stats.totalTeams}` : ''}
+                    </div>
+                    
+                    <div class="competition-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Record</div>
+                            <div class="stat-value">${record}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg Score</div>
+                            <div class="stat-value">${avgScore}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">High Score</div>
+                            <div class="stat-value">${highScore}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Matches</div>
+                            <div class="stat-value">${stats?.record?.matchesPlayed || 0}</div>
+                        </div>
+                    </div>
+                    
+                    ${awardsHTML}
+                    
+                    <button class="view-details-btn" onclick="event.stopPropagation(); showDetails('${comp.id}')">
+                        View Details →
+                    </button>
+                </div>
+            `;
+        }
+
+        // Show competition details modal
+        async function showDetails(eventId) {
+            const modal = document.getElementById('detailsModal');
+            modal.classList.add('active');
+            
+            const competition = allCompetitions.find(c => c.id == eventId);
+            if (!competition) return;
+            
+            // Set modal header
+            document.getElementById('modalEventName').textContent = competition.name;
+            document.getElementById('modalEventInfo').innerHTML = `
+                📍 ${competition.location?.city || ''}, ${competition.location?.region || ''} | 
+                📅 ${formatDate(competition.start)} - ${formatDate(competition.end)}
+            `;
+            
+            // Display loading state
+            document.getElementById('modalStats').innerHTML = '<div class="loading">Loading statistics</div>';
+            document.getElementById('modalMatches').innerHTML = '<div class="loading">Loading matches</div>';
+            
+            // Load detailed stats if not already loaded
+            if (!competition.stats) {
+                try {
+                    const response = await fetch(
+                        `${API_BASE}/api/events/${eventId}/teams/${currentTeam}/full-stats`
+                    );
+                    competition.stats = await response.json();
+                } catch (error) {
+                    console.error('Error loading detailed stats:', error);
+                    document.getElementById('modalStats').innerHTML = 
+                        '<div class="error">Failed to load statistics</div>';
+                    return;
+                }
+            }
+            
+            const stats = competition.stats;
+            
+            // Display stats
+            document.getElementById('modalStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-card-label">Final Rank</div>
+                    <div class="stat-card-value">#${stats.finalRank || 'N/A'}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Total Teams</div>
+                    <div class="stat-card-value">${stats.totalTeams || 'N/A'}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Record</div>
+                    <div class="stat-card-value">
+                        ${stats.record?.wins || 0}-${stats.record?.losses || 0}-${stats.record?.ties || 0}
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Win Rate</div>
+                    <div class="stat-card-value">${stats.performance?.winRate || 0}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Avg Score</div>
+                    <div class="stat-card-value">${stats.scores?.average || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">High Score</div>
+                    <div class="stat-card-value">${stats.scores?.high || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Consistency</div>
+                    <div class="stat-card-value">±${stats.scores?.consistency || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Awards</div>
+                    <div class="stat-card-value">${stats.awards?.length || 0}</div>
+                </div>
+            `;
+            
+            // Display matches
+            if (stats.matches && stats.matches.length > 0) {
+                const matchesHTML = stats.matches.map(match => {
+                    const resultClass = match.result || '';
+                    const resultEmoji = match.result === 'win' ? '🟢' : 
+                                       match.result === 'loss' ? '🔴' : 
+                                       match.result === 'tie' ? '🟡' : '⚪';
+                    const resultText = match.result ? match.result.toUpperCase() : 'N/A';
+                    const scoreText = match.scored ? 
+                        `${match.score} - ${match.opponentScore}` : 
+                        'Not Played';
+                    
+                    return `
+                        <div class="match-item ${resultClass}">
+                            <div class="match-name">${match.matchName}</div>
+                            <div class="match-info">
+                                <div>${resultEmoji} ${resultText}</div>
+                                <div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 5px;">
+                                    ${match.alliancePartners.length > 0 ? 
+                                        `Partners: ${match.alliancePartners.join(', ')}` : 
+                                        'Solo match'}
+                                </div>
+                            </div>
+                            <div class="match-score">${scoreText}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('modalMatches').innerHTML = matchesHTML;
+            } else {
+                document.getElementById('modalMatches').innerHTML = 
+                    '<div class="no-data">No match data available</div>';
+            }
+            
+            // Draw charts
+            drawModalCharts(stats);
+        }
+
+        // Draw charts in modal
+        function drawModalCharts(stats) {
+            // Record chart
+            const recordCtx = document.getElementById('modalRecordChart');
+            if (recordCtx && stats.record) {
+                if (window.modalRecordChart) {
+                    window.modalRecordChart.destroy();
+                }
+                
+                window.modalRecordChart = new Chart(recordCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Wins', 'Losses', 'Ties'],
+                        datasets: [{
+                            data: [
+                                stats.record.wins || 0,
+                                stats.record.losses || 0,
+                                stats.record.ties || 0
+                            ],
+                            backgroundColor: ['#4CAF50', '#F44336', '#FFC107'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#b8c0e0' }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Win/Loss Record',
+                                color: '#ffffff',
+                                font: { size: 16 }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Trend chart
+            const trendCtx = document.getElementById('modalTrendChart');
+            if (trendCtx && stats.matches) {
+                if (window.modalTrendChart) {
+                    window.modalTrendChart.destroy();
+                }
+                
+                const scores = stats.matches
+                    .filter(m => m.scored)
+                    .map(m => m.score);
+                
+                window.modalTrendChart = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: scores.map((_, i) => `M${i + 1}`),
+                        datasets: [{
+                            label: 'Score',
+                            data: scores,
+                            borderColor: TEAM_COLORS[currentTeam],
+                            backgroundColor: TEAM_COLORS[currentTeam] + '33',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Score Trend',
+                                color: '#ffffff',
+                                font: { size: 16 }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#b8c0e0' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#b8c0e0' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('detailsModal').classList.remove('active');
+        }
+
+        // Team selection
+        function selectTeam(team) {
+            currentTeam = team;
+            viewMode = 'single';
+            
+            // Update button states
+            document.querySelectorAll('.team-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide containers
+            document.getElementById('competitionsContainer').style.display = 'block';
+            document.getElementById('allTeamsContainer').style.display = 'none';
+            
+            // Reload data
+            loadPastCompetitions();
+        }
+
+        // View all teams
+        async function selectAllTeams() {
+            viewMode = 'all';
+            
+            // Update button states
+            document.querySelectorAll('.team-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide containers
+            document.getElementById('competitionsContainer').style.display = 'none';
+            document.getElementById('allTeamsContainer').style.display = 'block';
+            
+            const container = document.getElementById('allTeamsContainer');
+            container.innerHTML = '<div class="loading">Loading all teams data</div>';
+            
+            try {
+                const response = await fetch(
+                    `${API_BASE}/api/teams/multiple/past-events?teams=${TEAMS.join(',')}`
+                );
+                const data = await response.json();
+                
+                // Group events by team
+                const teamData = {};
+                TEAMS.forEach(team => {
+                    teamData[team] = {
+                        events: data.data.filter(e => e.teams.includes(team)),
+                        totalEvents: 0,
+                        totalWins: 0,
+                        totalLosses: 0,
+                        bestRank: Infinity
+                    };
+                });
+                
+                // Display all teams summary
+                const html = `
+                    <div class="all-teams-grid">
+                        ${TEAMS.map(team => `
+                            <div class="team-summary-card">
+                                <div class="team-summary-header team-${team.toLowerCase()}">${team}</div>
+                                <div class="stat-card">
+                                    <div class="stat-card-label">Total Competitions</div>
+                                    <div class="stat-card-value">${teamData[team].events.length}</div>
+                                </div>
+                                <div style="margin-top: 20px;">
+                                    <button class="view-details-btn" onclick="selectTeam('${team}')">
+                                        View ${team} History →
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading all teams data:', error);
+                container.innerHTML = '<div class="error">Failed to load all teams data</div>';
+            }
+        }
+
+        // Utility function
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('detailsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailsModal') {
+                closeModal();
+            }
+        });
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
