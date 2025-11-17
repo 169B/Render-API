@@ -735,6 +735,7 @@ app.get('/api/teams/:teamNumber/events/past', async (req, res) => {
 });
 
 // Get full competition statistics for a team at an event
+// Returns partial data when rankings are not available instead of 404
 app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) => {
   try {
     const { eventId, teamNumber } = req.params;
