@@ -829,16 +829,27 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
       });
     }
     
+    // Get ALL matches for ranking calculation (not filtered by team)
     const allMatches = [];
+    const allMatchesForRanking = [];
     for (const division of divisionsResponse.data.data) {
       const matchesResponse = await axios.get(
         `${ROBOTEVENTS_API_BASE}/events/${eventId}/divisions/${division.id}/matches`,
         {
           headers: robotEventsHeaders,
-          params: { team: teamId }
+          params: { per_page: 250 } // Get all matches, not filtered by team
         }
       );
-      allMatches.push(...matchesResponse.data.data);
+      const divisionMatches = matchesResponse.data.data || [];
+      allMatchesForRanking.push(...divisionMatches);
+      
+      // Filter for this team's matches in code
+      const teamMatches = divisionMatches.filter(match => 
+        match.alliances.some(alliance => 
+          alliance.teams.some(t => t.team.id === teamId)
+        )
+      );
+      allMatches.push(...teamMatches);
     }
     
     // Sort matches by scheduled time
@@ -918,6 +929,74 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
       consistency = Math.sqrt(variance);
     }
     
+    // Calculate estimated rank from matches if rankings not available
+    let calculatedRank = null;
+    let calculatedTotalTeams = null;
+    if (!teamRanking && allMatchesForRanking.length > 0) {
+      // Build standings from all matches
+      const teamStandings = {};
+      
+      allMatchesForRanking.forEach(match => {
+        // Only process scored matches
+        if (!match.scored || !match.started) return;
+        
+        match.alliances.forEach(alliance => {
+          if (!alliance.teams || alliance.teams.length === 0) return;
+          
+          const opponentAlliance = match.alliances.find(a => a.color !== alliance.color);
+          if (!opponentAlliance) return;
+          
+          alliance.teams.forEach(teamEntry => {
+            const currentTeamId = teamEntry.team.id;
+            const currentTeamName = teamEntry.team.name;
+            
+            if (!teamStandings[currentTeamId]) {
+              teamStandings[currentTeamId] = {
+                teamId: currentTeamId,
+                teamName: currentTeamName,
+                wins: 0,
+                losses: 0,
+                ties: 0,
+                wp: 0, // Win Points
+                ap: 0, // Autonomous + other points (simplified: use total score)
+                sp: 0  // Skill Points (not calculated from matches, defaults to 0)
+              };
+            }
+            
+            const standing = teamStandings[currentTeamId];
+            
+            // Calculate win/loss/tie
+            if (alliance.score > opponentAlliance.score) {
+              standing.wins++;
+              standing.wp += 2; // 2 points for a win
+            } else if (alliance.score < opponentAlliance.score) {
+              standing.losses++;
+            } else {
+              standing.ties++;
+              standing.wp += 1; // 1 point for a tie
+            }
+            
+            // Add alliance score to AP (simplified ranking calculation)
+            standing.ap += alliance.score || 0;
+          });
+        });
+      });
+      
+      // Convert to array and sort by WP, then AP
+      const standings = Object.values(teamStandings).sort((a, b) => {
+        if (b.wp !== a.wp) return b.wp - a.wp; // Sort by WP descending
+        if (b.ap !== a.ap) return b.ap - a.ap; // Then by AP descending
+        return b.sp - a.sp; // Then by SP descending
+      });
+      
+      // Find team's rank
+      const teamIndex = standings.findIndex(s => s.teamId === teamId);
+      if (teamIndex !== -1) {
+        calculatedRank = teamIndex + 1;
+        calculatedTotalTeams = standings.length;
+      }
+    }
+    
     // Get awards (if available)
     let awards = [];
     try {
@@ -940,8 +1019,8 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
       teamNumber,
       eventId,
       event: event,
-      finalRank: teamRanking ? teamRanking.rank : null,
-      totalTeams: rankings ? rankings.length : null,
+      finalRank: teamRanking ? teamRanking.rank : calculatedRank,
+      totalTeams: rankings ? rankings.length : calculatedTotalTeams,
       record: {
         wins,
         losses,
