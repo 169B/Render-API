@@ -762,7 +762,7 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
     
     const event = eventResponse.data;
     
-    // Get rankings
+    // Get rankings (optional - may not be available for all events)
     let rankings = null;
     let teamRanking = null;
     try {
@@ -776,20 +776,12 @@ app.get('/api/events/:eventId/teams/:teamNumber/full-stats', async (req, res) =>
       rankings = rankingsResponse.data.data || [];
       teamRanking = rankings.find(r => r.team.id === teamId);
       
-      // Handle 404s gracefully
       if (rankings.length === 0) {
-        console.log(`Rankings not available for event: ${eventId}`);
-        return res.status(404).json({ 
-          error: 'Rankings not published for this event',
-          message: 'This event may not have published results yet'
-        });
+        console.log(`Rankings not available for event: ${eventId}, continuing with partial data`);
       }
     } catch (err) {
-      console.log('Rankings not available for event:', eventId);
-      return res.status(404).json({ 
-        error: 'Rankings not available',
-        message: 'This event may not have published results yet'
-      });
+      console.log('Rankings not available for event:', eventId, '- continuing with partial data');
+      // Continue execution - rankings are optional
     }
     
     // Get all matches
